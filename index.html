@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm Đường Cứu Nước</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #f4f4f4; }
+        .container { position: fixed; width: 100vw; height: 100vh; background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; opacity: 1; transition: opacity 0.5s ease-in-out; }
+        .hidden { opacity: 0; pointer-events: none; }
+        .menu { position: relative; width: 100vw; height: 100vh; }
+        .menu button {
+            position: absolute;
+            font-size: 24px;
+            padding: 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #FF7E5F, #FEB47B);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .menu button:hover {
+            background: linear-gradient(135deg, #FF6F61, #FF9671);
+            transform: scale(1.1);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+       #btn1 { top: 60%; left: 10%; }
+#btn2 { top: 30%; left: 40%; }
+#btn3 { top: 50%; left: 70%; }
+#btn4 { top: 50%; left: 95%; } /* Di chuyển nút số 4 về phía bên phải của nút số 3 */
+        svg { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; }
+        svg.hidden { display: none; }
+
+        .overlay { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); width: 100%; height: 100%; }
+        .overlay div { background: #333; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; border: 2px solid white; transition: transform 0.3s ease-in-out; }
+        .overlay div:hover { background: #444; transform: scale(1.1); }
+        .question-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 0px 15px rgba(0,0,0,0.6); text-align: center; opacity: 0; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
+        .question-box.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .question-box p { font-size: 22px; font-weight: bold; }
+        .question-box button { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 18px; border: none; border-radius: 5px; cursor: pointer; background: #2196F3; color: white; transition: background 0.3s; }
+        .question-box button:hover { background: #1976D2; }
+        .exit-button {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 0, 0, 0.7); /* Màu tối nhẹ */
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 40px;
+    border-radius: 50%; /* Làm tròn nút */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exit-button:hover {
+    background-color: red; /* Đổi màu khi hover */
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
+}
+
+    </style>
+</head>
+<body>
+    <div class="container" id="mainMenu" style="background-image: url('background_main.jpg');">
+        <div class="menu">
+            <button id="btn1" onclick="startGame(1)">1</button>
+            <button id="btn2" onclick="startGame(2)">2</button>
+            <button id="btn3" onclick="startGame(3)">3</button>
+            <button id="btn4" onclick="startGame(4)">4</button>
+        </div>
+    </div>
+    <div class="container hidden" id="gameContainer">
+        <div class="overlay" id="overlay"></div>
+    </div>
+    <div class="exit-button" onclick="exitGame()">X</div>
+    <svg id="lines"></svg>
+    <script>
+        const backgrounds = {
+            1: 'stage1.jpg',
+            2: 'stage2.jpg',
+            3: 'stage3.jpg',
+            4: 'stage4.jpg',
+        };
+
+        const questionsSet = {
+		1: [
+                { text: "Bác Hồ rời bến cảng nào để ra đi tìm đường cứu nước?", options: ["A. Bến Nhà Rồng", "B. Bến Bạch Đằng", "C. Bến cảng Hải Phòng", "D. Bến cảng Đà Nẵng"], answer: "A. Bến Nhà Rồng" },
+                { text: "Bác Hồ ra đi tìm đường cứu nước là ngày nào?", options: ["A. 5/6/1911", "B. 2/9/1945", "C. 19/5/1890", "D. 3/2/1930"], answer: "A. 5/6/1911" },
+		{ text: "Bác Hồ ra đi tìm đường cứu nước năm bao nhiêu tuổi?", options: ["A. 19 tuổi", "B. 21 tuổi", "C. 23 tuổi", "D. 25 tuổi"], answer: "B. 21 tuổi" },
+		{ text: "Bác Hồ ra đi tìm đường cứu nước với tên gọi nào?", options: ["A.Nguyễn Ái Quốc", "B.Nguyễn Sinh Cung", "C.Nguyễn Tất Thành", "D.Hồ Chí Minh"], answer: "C.Nguyễn Tất Thành" },
+		{ text: "Con tàu Bác Hồ làm việc khi rời Việt Nam mang tên gì?", options: ["A.Amiral Latouche-Tréville", "B.La France", "C.Pasteur", "D.Titanic"], answer: "A.Amiral Latouche-Tréville" },
+		{ text: "Công việc đầu tiên trên tàu của Bác là gì?", options: ["A.Thuỷ thủ", "B.Đầu bếp", "C.Thợ máy", "D.Phụ bếp"], answer: "D.Phụ bếp" },
+		{ text: "Điểm dừng chân đầu tiên của Bác Hồ sau khi rời Việt Nam là ở đâu?", options: ["A.Pháp", "B.Singapore", "C.Anh", "D.Trung Quốc"], answer: "B.Singapore" },
+		{ text: "Bác Hồ đã từng viết thư gửi vua nước nào để xin du học nhưng không được hồi âm?", options: ["A.Pháp", "B.Nhật Bản", "C.Trung Quốc", "D.Mỹ"], answer: "B.Nhật Bản" }
+            ],
+            2: [
+                { text: "Năm 1919, Nguyễn Ái Quốc gửi bản yêu sách đến Hội nghị nào để đòi quyền tự do cho nhân dân Việt Nam?", options: ["A. Hội nghị Geneva", "B. Hội nghị Versailles", "C. Hội nghị Potsdam", "D. Hội nghị Yalta"], answer: "B. Hội nghị Versailles" },
+                { text: "Tại Pháp, Bác Hồ tham gia tổ chức nào để đấu tranh cho quyền lợi của nhân dân Việt Nam?", options: ["A. Hội Tam Điểm", "B. Hội những người Việt Nam yêu nước tại Pháp", "C. Hội Ái Hữu Đông Dương", "D. Mặt trận Việt Minh"], answer: "B. Hội những người Việt Nam yêu nước tại Pháp" },
+		{ text: "Năm 1919, Bác Hồ gửi bản yêu sách nào đến Hội nghị Versailles?", options: ["A. Bản Tuyên ngôn Độc lập", "B. Bản yêu sách của nhân dân An Nam", "C. Bản tuyên ngôn của Hội Việt Nam Cách mạng Thanh niên", "D. Bản đề nghị cải cách chính quyền Đông Dương"], answer: "B. Bản yêu sách của nhân dân An Nam" },
+		{ text: "Bác Hồ gia nhập Đảng Xã hội Pháp vào năm nào?", options: ["A. 1919", "B. 1920", "C. 1921", "D. 1923"], answer: "B. 1920" },
+		{ text: "Sau khi nghiên cứu Chủ nghĩa Mác - Lênin, Bác Hồ đã tham gia tổ chức nào?", options: ["A. Đảng Cộng sản Liên Xô", "B. Đảng Cộng sản Đông Dương", "C. Đảng Cộng sản Pháp", "D. Quốc tế Cộng sản"], answer: "C. Đảng Cộng sản Pháp" },
+		{ text: "Bác Hồ đã thành lập hội nào tại Pháp để tuyên truyền cách mạng?", options: ["A. Hội Liên hiệp Đông Dương", "B. Hội Liên hiệp các dân tộc bị áp bức", "C. Hội những người lao động Đông Dương", "D. Hội những người An Nam yêu nước"], answer: "B. Hội Liên hiệp các dân tộc bị áp bức" },
+		{ text: "Tên bài báo đầu tiên của Bác Hồ đăng trên tờ \"Nhân Đạo\" (L'Humanité) là gì?", options: ["A. Đông Dương và nhân quyền", "B. Quyền của các dân tộc thuộc địa", "C. Vấn đề dân bản xứ", "D. Thư gửi Quốc tế Cộng sản"], answer: "D. Thư gửi Quốc tế Cộng sản" },
+		{ text: "Bác Hồ đã dùng bút danh gì khi viết báo tại Pháp?", options: ["A. Nguyễn Ái Quốc", "B. Nguyễn Tất Thành", "C. Trần Văn Thành", "D. Văn Ba"], answer: "A. Nguyễn Ái Quốc" }
+            ],
+	    3: [
+		{ text: "Hội nghị thành lập Đảng Cộng sản Việt Nam diễn ra vào thời gian nào?", options: ["A. Ngày 2/9/1945", "B. Ngày 3/2/1930", "C. Ngày 19/8/1945", "D. Ngày 30/4/1975"], answer: "B. Ngày 3/2/1930" },
+                { text: "Hội nghị thành lập Đảng Cộng sản Việt Nam diễn ra ở đâu?", options: ["A. Quảng Châu (Trung Quốc)", "B. Hà Nội (Việt Nam)", "C. Mát-xcơ-va (Liên Xô)", "D. Sài Gòn (Việt Nam)"], answer: "A. Quảng Châu (Trung Quốc)" },
+		{ text: "Người chủ trì Hội nghị thành lập Đảng Cộng sản Việt Nam là ai?", options: ["A. Trần Phú", "B. Nguyễn Ái Quốc", "C. Lê Hồng Phong", "D. Nguyễn Văn Cừ"], answer: "B. Nguyễn Ái Quốc" },
+		{ text: "Trước khi thống nhất thành Đảng Cộng sản Việt Nam, nước ta có mấy tổ chức cộng sản riêng lẻ?", options: ["A. 2", "B. 3", "C. 4", "D. 5"], answer: "B. 3" },
+		{ text: "Khẩu hiệu nào được đề ra trong Cương lĩnh chính trị đầu tiên của Đảng Cộng sản Việt Nam?", options: ["A. Dân tộc độc lập, dân quyền tự do, dân sinh hạnh phúc", "B. Độc lập dân tộc gắn liền với chủ nghĩa xã hội", "C. Tự do - Bình đẳng - Bác ái", "D. Vô sản toàn thế giới, đoàn kết lại"], answer: "A. Dân tộc độc lập, dân quyền tự do, dân sinh hạnh phúc" },
+		{ text: "Văn kiện nào của Đảng Cộng sản Việt Nam được viết bằng tiếng Pháp ngay khi thành lập?", options: ["A. Cương lĩnh chính trị", "B. Sách lược vắn tắt", "C. Điều lệ Đảng", "D. Chánh cương vắn tắt"], answer: "A. Cương lĩnh chính trị" },
+		{ text: "Ba tổ chức cộng sản được hợp nhất thành Đảng Cộng sản Việt Nam gồm những tổ chức nào?", options: ["A. Đông Dương Cộng sản Đảng, An Nam Cộng sản Đảng, Tân Việt Cách mạng Đảng", "B. Đông Dương Cộng sản Đảng, Đông Dương Cộng sản Liên đoàn, An Nam Cộng sản Đảng", "C. Đông Dương Cộng sản Liên đoàn, Hội Việt Nam Cách mạng Thanh niên, Đảng Cộng sản Đông Dương", "D. Đông Dương Cộng sản Liên đoàn, Đảng Cộng sản Đông Dương, Đảng Cộng sản Đông Nam Á"], answer: "B. Đông Dương Cộng sản Đảng, Đông Dương Cộng sản Liên đoàn, An Nam Cộng sản Đảng" },
+		{ text: "Báo chí của Đảng Cộng sản Việt Nam ngay sau khi thành lập có tờ nào?", options: ["A. Báo Nhân Dân", "B. Báo Sự Thật", "C. Báo Búa Liềm", "D. Báo Cờ Đỏ"], answer: "C. Báo Búa Liềm" }
+	    ],	
+	    4: [
+	         { text: "Năm 1941, Nguyễn Ái Quốc trở về nước sau 30 năm bôn ba ở đâu?", options: ["A. Pác Bó, Cao Bằng", "B. Ba Đình, Hà Nội", "C. Tân Trào, Tuyên Quang", "D. Điện Biên Phủ, Lai Châu"], answer: "A. Pác Bó, Cao Bằng" },
+                { text: "Câu nói nổi tiếng của Hồ Chí Minh khi trở về nước năm 1941 là gì?", options: ["A. Không có gì quý hơn độc lập, tự do!", "B. Lúc này thời cơ đã đến, chúng ta phải hành động!", "C. Lần này về nước, dù có đốt cháy dãy Trường Sơn cũng phải giành cho được độc lập!", "D. Các vua Hùng đã có công dựng nước, Bác cháu ta phải cùng nhau giữ lấy nước!"], answer: "C. Lần này về nước, dù có đốt cháy dãy Trường Sơn cũng phải giành cho được độc lập!" },
+		{ text: "Sự kiện nào đánh dấu sự thắng lợi của Cách mạng Tháng Tám năm 1945?", options: ["A. Quân Nhật đầu hàng Đồng minh vô điều kiện", "B. Hồ Chí Minh đọc Tuyên ngôn Độc lập tại Quảng trường Ba Đình", "C. Nhân dân Hà Nội khởi nghĩa giành chính quyền", "D. Đảng Cộng sản Đông Dương kêu gọi toàn quốc kháng chiến"], answer: "B. Hồ Chí Minh đọc Tuyên ngôn Độc lập tại Quảng trường Ba Đình" },
+		{ text: "Nguyễn Ái Quốc lấy bí danh gì khi trở về Việt Nam năm 1941?", options: ["A. Trần Lực", "B. Hồ Quang", "C. Già Thu", "D. Vương Chí Sình"], answer: "C. Già Thu" },
+		{ text: "Hồ Chí Minh và Trung ương Đảng chọn địa điểm nào để tổ chức Quốc dân Đại hội quyết định Tổng khởi nghĩa?", options: ["A. Pác Bó, Cao Bằng", "B. Ba Đình, Hà Nội", "C. Tân Trào, Tuyên Quang", "D. Chiến khu Bắc Sơn"], answer: "C. Tân Trào, Tuyên Quang" },
+		{ text: "Ai là người đọc bản “Quân lệnh số 1” phát động Tổng khởi nghĩa trên cả nước?", options: ["A. Võ Nguyên Giáp", "B. Hồ Chí Minh", "C. Trường Chinh", "D. Nguyễn Văn Cừ"], answer: "A. Võ Nguyên Giáp" },
+		{ text: "Sau khi nước Việt Nam Dân chủ Cộng hòa được thành lập, Hồ Chí Minh đã viết thư gửi cho tổng thống nào để đề nghị công nhận nền độc lập của Việt Nam?", options: ["A. Franklin D. Roosevelt", "B. Harry S. Truman", "C. Charles de Gaulle", "D. Winston Churchill"], answer: "B. Harry S. Truman" },
+		{ text: "Trong Tuyên ngôn Độc lập ngày 2/9/1945, Hồ Chí Minh đã trích dẫn từ những bản tuyên ngôn nào để khẳng định quyền độc lập của dân tộc Việt Nam?", options: ["A. Tuyên ngôn Độc lập của Mỹ (1776) và Tuyên ngôn Nhân quyền và Dân quyền của Pháp (1789)", "B. Tuyên ngôn Cộng sản (1848) và Tuyên ngôn Độc lập của Mỹ (1776)", "C. Tuyên ngôn Nhân quyền và Dân quyền của Pháp (1789) và Hiến chương Đại Tây Dương (1941)", "D. Hiến chương Đại Tây Dương (1941) và Tuyên ngôn Độc lập của Mỹ (1776)"], answer: "A. Tuyên ngôn Độc lập của Mỹ (1776) và Tuyên ngôn Nhân quyền và Dân quyền của Pháp (1789)" }
+	    ],	   
+
+            // Thêm các câu hỏi cho các stage khác
+        };
+        let currentStage = 1;
+        
+        function startGame(stage) {
+            currentStage = stage;
+            document.getElementById("mainMenu").classList.add("hidden");
+            document.getElementById("lines").classList.add("hidden"); // Ẩn các đường nối
+            setTimeout(() => {
+                document.getElementById("gameContainer").classList.remove("hidden");
+                document.getElementById("gameContainer").style.backgroundImage = `url('${backgrounds[stage]}')`; // Thay đổi hình nền
+                loadQuestions(stage);
+            }, 500);
+        }
+        
+        function loadQuestions(stage) {
+            const overlay = document.getElementById("overlay");
+            overlay.innerHTML = "";
+            questionsSet[stage].forEach((q, index) => {
+                const div = document.createElement("div");
+                div.textContent = index + 1;
+                div.onclick = () => showQuestion(index, div);
+                overlay.appendChild(div);
+            });
+        }
+        
+        function showQuestion(index, div) {
+            const question = questionsSet[currentStage][index];
+            const questionBox = document.createElement("div");
+            questionBox.className = "question-box";
+            setTimeout(() => questionBox.classList.add("show"), 50);
+            
+            questionBox.innerHTML = `<p>${question.text}</p>`;
+            question.options.forEach(option => {
+                const btn = document.createElement("button");
+                btn.textContent = option;
+                btn.onclick = () => {
+                    if (option === question.answer) {
+                        div.style.visibility = "hidden";
+                    }
+                    questionBox.classList.remove("show");
+                    setTimeout(() => questionBox.remove(), 300);
+                };
+                questionBox.appendChild(btn);
+            });
+            document.body.appendChild(questionBox);
+        }
+        
+        function exitGame() {
+            document.getElementById("gameContainer").classList.add("hidden");
+            setTimeout(() => {
+                document.getElementById("mainMenu").classList.remove("hidden");
+                document.getElementById("lines").classList.remove("hidden"); // Hiển thị lại các đường nối
+            }, 500);
+        }
+        
+        function drawLines() {
+            const svg = document.getElementById("lines");
+            svg.innerHTML = "";
+            const positions = [
+                { id: "btn1" }, { id: "btn2" }, { id: "btn3" }, { id: "btn4" }
+            ];
+            const connections = [
+                [0, 1], [1, 2], [2, 3]
+            ];
+
+            const radius = 50; // Bán kính của các nút (50px vì width và height của nút là 100px)
+
+            connections.forEach(([a, b]) => {
+                const btnA = document.getElementById(positions[a].id).getBoundingClientRect();
+                const btnB = document.getElementById(positions[b].id).getBoundingClientRect();
+
+                // Tọa độ tâm của các nút
+                const centerA = {
+                    x: btnA.left + btnA.width / 2,
+                    y: btnA.top + btnA.height / 2
+                };
+                const centerB = {
+                    x: btnB.left + btnB.width / 2,
+                    y: btnB.top + btnB.height / 2
+                };
+
+                // Tính góc giữa hai tâm
+                const angle = Math.atan2(centerB.y - centerA.y, centerB.x - centerA.x);
+
+                // Tính toán điểm kết thúc tại viền của vòng tròn
+                const x1 = centerA.x + radius * Math.cos(angle);
+                const y1 = centerA.y + radius * Math.sin(angle);
+                const x2 = centerB.x - radius * Math.cos(angle);
+                const y2 = centerB.y - radius * Math.sin(angle);
+
+                // Vẽ đường nối
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+// Tính toán điểm điều khiển (control points) để tạo đường cong
+const controlX1 = (x1 + x2) / 2 + 50; // Điểm điều khiển 1 (thay đổi giá trị 50 để điều chỉnh độ cong)
+const controlY1 = y1 - 50; // Điểm điều khiển 1
+const controlX2 = (x1 + x2) / 2 - 50; // Điểm điều khiển 2
+const controlY2 = y2 + 50; // Điểm điều khiển 2
+
+// Tạo đường cong Bezier
+const d = `M ${x1} ${y1} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${x2} ${y2}`;
+path.setAttribute("d", d);
+path.setAttribute("stroke", "#333");
+path.setAttribute("stroke-width", "4");
+path.setAttribute("fill", "none");
+path.setAttribute("stroke-linecap", "round");
+
+svg.appendChild(path);
+            });
+        }
+        
+        window.onload = drawLines;
+        window.onresize = drawLines;
+    </script>
+</body>
+</html>
